@@ -1,25 +1,33 @@
-import { searchVideos } from "@/services/youtube";
-import { VideoCard } from "@/components/video-card";
+import { auth } from "@clerk/nextjs/server";
+import { getUserFeed } from "@/lib/feed";
+import { VideoMasonry } from "@/components/video-masonry";
 
 export default async function FeedPage() {
-  const videos = await searchVideos("Lofi hip hop mix", 12);
+  const { userId } = await auth();
+  
+  if (!userId) {
+    return null;
+  }
+
+  const videos = await getUserFeed(userId);
 
   return (
     <div className="flex flex-1 flex-col p-6">
-      <h2 className="text-2xl font-semibold tracking-tight">Your Feed</h2>
-      <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-        Showing curated videos for your interests.
-      </p>
-
-      <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {videos.map((video, index) => (
-          <VideoCard 
-            key={video.id} 
-            video={video} 
-            priority={index < 4}
-          />
-        ))}
+      <div className="max-w-4xl mb-8">
+        <h2 className="text-2xl font-semibold tracking-tight">Your Feed</h2>
+        <p className="mt-2 text-zinc-500 dark:text-zinc-400">
+          Showing curated videos for your interests.
+        </p>
       </div>
+
+      <VideoMasonry videos={videos} />
+      
+      {videos.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-zinc-500">No videos found based on your interests.</p>
+          <p className="text-sm text-zinc-400 mt-1">Try updating your interests in settings.</p>
+        </div>
+      )}
     </div>
   );
 }
