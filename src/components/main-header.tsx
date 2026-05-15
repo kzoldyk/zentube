@@ -2,13 +2,13 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs"
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { Button } from "@/components/ui/button"
 
 export function MainHeader() {
   const { scrollY } = useScroll()
-  
+
   // Interpolate values based on scroll position
   // The header starts transparent and becomes solid/blurred over 20px of scroll
   const headerOpacity = useTransform(scrollY, [0, 20], [0, 1])
@@ -16,7 +16,7 @@ export function MainHeader() {
   const backdropFilter = useTransform(blurValue, (v) => `blur(${v}px)`)
 
   return (
-    <header className="sticky top-0 z-50 h-16 flex items-center justify-between px-6 py-3 transition-colors">
+    <header className="sticky top-0 z-50 flex h-16 items-center justify-between px-6 py-3 transition-colors">
       {/* 
         Animated background layer. 
         We use an absolute div to allow for independent opacity/blur 
@@ -29,13 +29,13 @@ export function MainHeader() {
           backdropFilter,
         }}
       />
-      
+
       <Link href="/" className="text-lg font-semibold tracking-tight">
         Zentube
       </Link>
-      
+
       <div className="flex items-center gap-4">
-        <SignedOut>
+        <Show when="signed-out">
           <SignInButton mode="modal">
             <Button variant="ghost" size="sm">
               Sign in
@@ -46,11 +46,12 @@ export function MainHeader() {
               Sign up
             </Button>
           </SignUpButton>
-        </SignedOut>
-        <SignedIn>
+        </Show>
+        <Show when="signed-in">
           <UserButton />
-        </SignedIn>
+        </Show>
       </div>
     </header>
   )
 }
+
