@@ -3,11 +3,7 @@
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-interface CollectionButtonProps {
-  videoId: string
-}
-
-export function CollectionButton({ videoId }: CollectionButtonProps) {
+export function CollectionButton() {
   return (
     <Button
       variant="outline"

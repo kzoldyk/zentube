@@ -64,7 +64,7 @@ export default async function WatchPage({
 
           <div className="flex flex-wrap items-center gap-3">
             <BookmarkButton videoId={id} initialIsBookmarked={watchState.isBookmarked} />
-            <CollectionButton videoId={id} />
+            <CollectionButton />
           </div>
         </div>
 
