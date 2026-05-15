@@ -27,5 +27,5 @@ export async function saveUserInterests(topics: string[]) {
     }
   })
 
-  revalidatePath("/")
+  revalidatePath("/", "layout")
 }
