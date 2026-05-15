@@ -11,23 +11,30 @@ import { Button } from "@/components/ui/button"
 interface VideoCardProps {
   video: ZentubeVideo
   className?: string
+  priority?: boolean
 }
 
-export function VideoCard({ video, className }: VideoCardProps) {
+export function VideoCard({ video, className, priority }: VideoCardProps) {
   return (
-    <motion.div
+    <motion.article
       whileHover={{ scale: 1.02 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
       className={cn("group flex flex-col gap-2", className)}
     >
       <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
-        <Link href={`/watch/${video.id}`} className="block h-full w-full">
+        <Link 
+          href={`/watch/${video.id}`} 
+          className="block h-full w-full"
+          tabIndex={-1}
+          aria-hidden="true"
+        >
           <Image
             src={video.thumbnailUrl}
             alt={video.title}
             fill
             className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            priority={priority}
           />
         </Link>
         
@@ -35,6 +42,7 @@ export function VideoCard({ video, className }: VideoCardProps) {
           <Button
             variant="ghost"
             size="icon-sm"
+            aria-label="Save to bookmarks"
             className="h-8 w-8 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-900"
             onClick={(e) => {
               e.preventDefault()
@@ -56,6 +64,6 @@ export function VideoCard({ video, className }: VideoCardProps) {
           {video.channelTitle}
         </p>
       </div>
-    </motion.div>
+    </motion.article>
   )
 }
