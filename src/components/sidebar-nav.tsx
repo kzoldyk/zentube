@@ -32,7 +32,7 @@ export function SidebarNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/50",
+                "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-accent/50",
                 isActive ? "text-foreground" : "text-muted-foreground"
               )}
             >

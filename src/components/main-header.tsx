@@ -16,7 +16,7 @@ export function MainHeader() {
   const backdropFilter = useTransform(blurValue, (v) => `blur(${v}px)`)
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 transition-colors">
+    <header className="sticky top-0 z-50 h-16 flex items-center justify-between px-6 py-3 transition-colors">
       {/* 
         Animated background layer. 
         We use an absolute div to allow for independent opacity/blur 
