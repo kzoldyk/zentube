@@ -7,14 +7,38 @@ import { Bookmark } from "lucide-react"
 import { ZentubeVideo } from "@/types/youtube"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { toggleBookmark } from "@/lib/actions/interactions"
+import { useOptimistic, useTransition } from "react"
 
 interface VideoCardProps {
   video: ZentubeVideo
   className?: string
   priority?: boolean
+  isBookmarked?: boolean
 }
 
-export function VideoCard({ video, className, priority }: VideoCardProps) {
+export function VideoCard({ video, className, priority, isBookmarked = false }: VideoCardProps) {
+  const [isPending, startTransition] = useTransition()
+  const [optimisticBookmarked, setOptimisticBookmarked] = useOptimistic(
+    isBookmarked,
+    (state, newState: boolean) => newState
+  )
+
+  const handleToggleBookmark = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    startTransition(async () => {
+      const newState = !optimisticBookmarked
+      setOptimisticBookmarked(newState)
+      try {
+        await toggleBookmark(video.id)
+      } catch (error) {
+        console.error("Failed to toggle bookmark:", error)
+      }
+    })
+  }
+
   return (
     <motion.article
       whileHover={{ scale: 1.02 }}
@@ -38,18 +62,24 @@ export function VideoCard({ video, className, priority }: VideoCardProps) {
           />
         </Link>
         
-        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className={cn(
+          "absolute top-2 right-2 z-10 transition-opacity duration-200",
+          optimisticBookmarked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        )}>
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Save to bookmarks"
-            className="h-8 w-8 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-900"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-            }}
+            aria-label={optimisticBookmarked ? "Remove from bookmarks" : "Save to bookmarks"}
+            className={cn(
+              "h-8 w-8 rounded-full backdrop-blur-sm transition-colors",
+              optimisticBookmarked 
+                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                : "bg-white/80 dark:bg-zinc-900/80 hover:bg-white dark:hover:bg-zinc-900"
+            )}
+            onClick={handleToggleBookmark}
+            disabled={isPending}
           >
-            <Bookmark className="size-4" />
+            <Bookmark className={cn("size-4", optimisticBookmarked && "fill-current")} />
           </Button>
         </div>
       </div>

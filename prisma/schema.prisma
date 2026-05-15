@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String?
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  interests       Interest[]
+  bookmarks       Bookmark[]
+  collections     Collection[]
+  watchProgresses WatchProgress[]
+}
+
+model Video {
+  id           String    @id @default(cuid())
+  youtubeId    String    @unique
+  title        String
+  description  String?
+  thumbnailUrl String?
+  channelId    String?
+  channelTitle String?
+  duration     Int?
+  viewCount    BigInt?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  topics        String[]
+  bookmarks     Bookmark[]
+  collections   CollectionVideo[]
+  watchProgress WatchProgress[]
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  note      String?
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+}
+
+model Collection {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos CollectionVideo[]
+}
+
+model CollectionVideo {
+  collectionId String
+  videoId      String
+  order        Int      @default(0)
+  addedAt      DateTime @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  video      Video      @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, videoId])
+}
+
+model Interest {
+  id     String @id @default(cuid())
+  userId String
+  topic  String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topic])
+}
+
+model WatchProgress {
+  id       String   @id @default(cuid())
+  userId   String
+  videoId  String
+  progress Float    @default(0)
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+}

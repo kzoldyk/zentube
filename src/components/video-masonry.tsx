@@ -5,7 +5,7 @@ import { ZentubeVideo } from "@/types/youtube"
 import { VideoCard } from "@/components/video-card"
 
 interface VideoMasonryProps {
-  videos: ZentubeVideo[]
+  videos: (ZentubeVideo & { isBookmarked?: boolean })[]
 }
 
 const container: Variants = {
@@ -44,7 +44,10 @@ export function VideoMasonry({ videos }: VideoMasonryProps) {
           variants={item}
           className="break-inside-avoid mb-6"
         >
-          <VideoCard video={video} />
+          <VideoCard 
+            video={video} 
+            isBookmarked={video.isBookmarked}
+          />
         </motion.div>
       ))}
     </motion.div>
