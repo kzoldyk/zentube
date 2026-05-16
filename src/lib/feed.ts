@@ -48,10 +48,10 @@ export async function getUserFeed(userId: string): Promise<{ videos: (ZentubeVid
   ])
   
   // Combine interest results with base weights
-  const weightedVideos = interestResults.flatMap((result, index) => {
+  const weightedVideos = interestResults.flatMap((result: PromiseSettledResult<ZentubeVideo[]>, index) => {
     if (result.status === 'fulfilled') {
       const weight = 1 / (index + 1)
-      return result.value.videos.map(video => ({
+      return result.value.videos.map((video: ZentubeVideo) => ({
         video,
         score: Math.random() * weight
       }))
@@ -60,7 +60,7 @@ export async function getUserFeed(userId: string): Promise<{ videos: (ZentubeVid
   })
 
   // Add recommendations with a higher fixed weight (0.8) to make them surface
-  const recommendedVideos = recommendationResult.videos.map(video => ({
+  const recommendedVideos = recommendationResult.videos.map((video: ZentubeVideo) => ({
     video,
     score: Math.random() * 0.8
   }))
