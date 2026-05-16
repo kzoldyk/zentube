@@ -1,4 +1,4 @@
-import { getVideoDetails, getRelatedVideos } from "@/services/youtube";
+import { getVideoDetails } from "@/services/youtube";
 import { VideoPlayer } from "@/components/video-player";
 import { getWatchState } from "@/lib/actions/interactions";
 import { notFound } from "next/navigation";
@@ -7,7 +7,6 @@ import { CollectionButton } from "./collection-button";
 import { VideoDescription } from "./video-description";
 import { formatDate, formatViews } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { VideoMasonry } from "@/components/video-masonry";
 
 export default async function WatchPage({
   params,
@@ -26,9 +25,6 @@ export default async function WatchPage({
   if (!video) {
     notFound();
   }
-
-  // Fetch related videos
-  const { videos: relatedVideos } = await getRelatedVideos(video, 12);
 
   return (
     <div className="flex flex-1 flex-col items-center pb-20">
@@ -73,15 +69,6 @@ export default async function WatchPage({
         </div>
 
         <VideoDescription description={video.description} />
-
-        {/* Discovery Section */}
-        <div className="mt-20 space-y-8">
-          <div className="flex flex-col gap-2">
-            <h3 className="text-2xl font-bold tracking-tight">Recommended Discovery</h3>
-            <p className="text-muted-foreground">More videos similar to this one, distilled for your focus.</p>
-          </div>
-          <VideoMasonry videos={relatedVideos} />
-        </div>
       </div>
     </div>
   );

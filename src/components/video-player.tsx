@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { updateProgress } from "@/lib/actions/interactions"
 
 interface VideoPlayerProps {
@@ -8,12 +8,32 @@ interface VideoPlayerProps {
   initialProgress?: number
 }
 
+interface YTPlayer {
+  destroy(): void
+  getCurrentTime(): number
+  getPlayerState(): number
+}
+
+interface YTPlayerOptions {
+  videoId: string
+  width: string | number
+  height: string | number
+  playerVars?: {
+    start?: number
+    autoplay?: number
+    modestbranding?: number
+    rel?: number
+  }
+  events?: {
+    onStateChange?: (event: { data: number }) => void
+  }
+}
+
 declare global {
   interface Window {
-    onYouTubeIframeAPIReady?: () => void
+    onYouTubeIframeAPIReady: () => void
     YT: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      Player: any
+      Player: new (element: HTMLElement | null, options: YTPlayerOptions) => YTPlayer
       PlayerState: {
         PLAYING: number
         PAUSED: number
@@ -25,164 +45,103 @@ declare global {
   }
 }
 
-// Track script loading globally to prevent duplicate tags
-let isScriptLoading = false
+// Global flag to track if the YouTube API script has been loaded
+let isApiLoaded = false
+// Queue of initialization functions to run when the API is ready
+const apiReadyQueue: (() => void)[] = []
 
 export function VideoPlayer({ videoId, initialProgress = 0 }: VideoPlayerProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const playerRef = useRef<any>(null)
-  const [isApiReady, setIsApiReady] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const playerRef = useRef<YTPlayer | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const lastSavedTime = useRef<number>(initialProgress)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (!mounted) return
-
-    let isComponentMounted = true
-
     const initPlayer = () => {
-      // Check if we have everything needed and haven't already initialized
-      if (!isComponentMounted || !iframeRef.current || !window.YT?.Player || playerRef.current) return
+      if (!containerRef.current) return
 
-      try {
-        console.log("Upgrading YouTube Player with API for tracking...")
-        playerRef.current = new window.YT.Player(iframeRef.current, {
-          events: {
-            onReady: () => {
-              if (isComponentMounted) {
-                console.log("YouTube API Connected")
-                setIsApiReady(true)
-              }
-            },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onStateChange: (event: any) => {
-              if (event.data === window.YT.PlayerState.PAUSED) {
-                saveProgress()
-              }
-            },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onError: (err: any) => {
-              console.error("YouTube Player Error Code:", err.data)
-            },
-          },
-        })
-      } catch (err) {
-        console.error("Error attaching YouTube API:", err)
+      // If a player already exists, destroy it before creating a new one
+      if (playerRef.current && typeof playerRef.current.destroy === "function") {
+        playerRef.current.destroy()
       }
+
+      playerRef.current = new window.YT.Player(containerRef.current, {
+        videoId: videoId,
+        width: "100%",
+        height: "100%",
+        playerVars: {
+          start: Math.floor(initialProgress),
+          autoplay: 1,
+          modestbranding: 1,
+          rel: 0,
+        },
+        events: {
+          onStateChange: (event: { data: number }) => {
+            // YT.PlayerState.PAUSED = 2
+            if (event.data === window.YT.PlayerState.PAUSED) {
+              saveProgress()
+            }
+          },
+        },
+      })
     }
 
     const saveProgress = () => {
-      const currentPlayer = playerRef.current
-      if (currentPlayer && typeof currentPlayer.getCurrentTime === "function") {
-        try {
-          const currentTime = Math.floor(currentPlayer.getCurrentTime())
-          if (currentTime !== lastSavedTime.current) {
-            updateProgress(videoId, currentTime)
-            lastSavedTime.current = currentTime
-          }
-        } catch {
-          // Ignore errors
+      if (playerRef.current && typeof playerRef.current.getCurrentTime === "function") {
+        const currentTime = Math.floor(playerRef.current.getCurrentTime())
+        if (currentTime !== lastSavedTime.current) {
+          updateProgress(videoId, currentTime)
+          lastSavedTime.current = currentTime
         }
       }
     }
 
-    // Script Loading & API Ready Handling
-    if (!window.YT) {
-      if (!isScriptLoading) {
-        isScriptLoading = true
-        const tag = document.createElement("script")
-        tag.src = "https://www.youtube.com/iframe_api"
-        const firstScriptTag = document.getElementsByTagName("script")[0]
-        if (firstScriptTag?.parentNode) {
-          firstScriptTag.parentNode.insertBefore(tag, firstScriptTag)
-        } else {
-          document.head.appendChild(tag)
-        }
+    const onApiReady = () => {
+      isApiLoaded = true
+      while (apiReadyQueue.length > 0) {
+        const cb = apiReadyQueue.shift()
+        if (cb) cb()
       }
+    }
 
-      const prevCallback = window.onYouTubeIframeAPIReady
-      window.onYouTubeIframeAPIReady = () => {
-        if (prevCallback) prevCallback()
-        if (isComponentMounted) initPlayer()
+    if (!isApiLoaded) {
+      if (!window.onYouTubeIframeAPIReady) {
+        const tag = document.createElement('script')
+        tag.src = "https://www.youtube.com/iframe_api"
+        const firstScriptTag = document.getElementsByTagName('script')[0]
+        firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
+        window.onYouTubeIframeAPIReady = onApiReady
       }
+      apiReadyQueue.push(initPlayer)
     } else if (window.YT && window.YT.Player) {
       initPlayer()
+    } else {
+      // API script is loading but not yet finished
+      apiReadyQueue.push(initPlayer)
     }
 
     const intervalId = setInterval(() => {
-      const currentPlayer = playerRef.current
-      if (currentPlayer && typeof currentPlayer.getPlayerState === "function") {
-        try {
-          if (currentPlayer.getPlayerState() === window.YT.PlayerState.PLAYING) {
-            saveProgress()
-          }
-        } catch {
-          // Ignore
+      if (playerRef.current && typeof playerRef.current.getPlayerState === "function") {
+        // Only save if the video is currently playing
+        if (playerRef.current.getPlayerState() === window.YT.PlayerState.PLAYING) {
+          saveProgress()
         }
       }
     }, 10000)
 
     return () => {
-      isComponentMounted = false
       clearInterval(intervalId)
       saveProgress()
-      if (playerRef.current && typeof playerRef.current.destroy === "function") {
-        try {
-          playerRef.current.destroy()
-        } catch {
-          // Ignore
-        }
+      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
+        playerRef.current.destroy()
         playerRef.current = null
       }
     }
-  }, [videoId, mounted])
-
-  if (!mounted) {
-    return (
-      <div className="relative aspect-video w-full bg-zinc-950 overflow-hidden rounded-2xl shadow-2xl border border-white/5" />
-    )
-  }
-
-  // Construct URL with necessary parameters
-  const params = new URLSearchParams({
-    enablejsapi: "1",
-    origin: window.location.origin,
-    start: Math.floor(initialProgress).toString(),
-    rel: "0",
-    modestbranding: "1",
-    playsinline: "1",
-    autoplay: "0",
-  })
-
-  // Use youtube-nocookie.com for better privacy and compatibility with Chrome settings
-  const videoUrl = `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`
+  }, [videoId, initialProgress])
 
   return (
-    <div className="relative aspect-video w-full bg-zinc-950 overflow-hidden rounded-2xl shadow-2xl border border-white/5 group">
-      <iframe
-        ref={iframeRef}
-        src={videoUrl}
-        className="w-full h-full border-0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-        title="YouTube video player"
-      />
-      
-      {/* Visual indicator of API connection status (optional, subtle) */}
-      {!isApiReady && (
-        <div className="absolute top-4 right-4 flex items-center gap-2 px-2 py-1 rounded bg-black/50 backdrop-blur-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="size-2 bg-zinc-500 rounded-full animate-pulse" />
-          <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-tighter">
-            Basic Mode
-          </span>
-        </div>
-      )}
+    <div className="relative aspect-video w-full bg-black overflow-hidden rounded-xl shadow-2xl border border-white/10 group">
+      <div ref={containerRef} className="w-full h-full" />
+      {/* Overlay to catch clicks if needed or for custom UI, but we want YT controls for now */}
     </div>
   )
 }

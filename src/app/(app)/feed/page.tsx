@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { getUserFeed } from "@/lib/feed";
-import { PaginatedMasonry } from "@/components/paginated-masonry";
-import { loadMoreFeed } from "@/lib/actions/pagination";
+import { VideoMasonry } from "@/components/video-masonry";
 
 export default async function FeedPage() {
   const { userId } = await auth();
@@ -10,7 +9,7 @@ export default async function FeedPage() {
     return null;
   }
 
-  const { videos, hasMore } = await getUserFeed(userId);
+  const videos = await getUserFeed(userId);
 
   return (
     <div className="flex flex-1 flex-col p-6">
@@ -21,13 +20,9 @@ export default async function FeedPage() {
         </p>
       </div>
 
-      {videos.length > 0 ? (
-        <PaginatedMasonry 
-          initialVideos={videos} 
-          initialNextPageToken={hasMore ? "1" : undefined}
-          fetchNextPage={loadMoreFeed}
-        />
-      ) : (
+      <VideoMasonry videos={videos} />
+      
+      {videos.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="text-zinc-500">No videos found based on your interests.</p>
           <p className="text-sm text-zinc-400 mt-1">Try updating your interests in settings.</p>
