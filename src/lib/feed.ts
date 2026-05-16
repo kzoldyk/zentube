@@ -1,8 +1,9 @@
-import { prisma } from "@/lib/prisma"
+import { getPrisma } from "@/lib/prisma"
 import { searchVideos, getRelatedVideos } from "@/services/youtube"
 import { ZentubeVideo } from "@/types/youtube"
 
 export async function getUserFeed(userId: string): Promise<{ videos: (ZentubeVideo & { isBookmarked?: boolean })[], hasMore: boolean }> {
+  const prisma = await getPrisma()
   const user = await prisma.user.findUnique({
     where: { clerkId: userId },
     include: { 

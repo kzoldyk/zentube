@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model User {
@@ -31,15 +31,27 @@ model Video {
   channelId    String?
   channelTitle String?
   duration     Int?
-  viewCount    BigInt?
+  // SQLite doesn't have BigInt, using Float or Int for viewCount
+  viewCount    Float?    
   publishedAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  topics        String[]
+  // SQLite doesn't support String[], using a relation instead
+  topics        Topic[]
   bookmarks     Bookmark[]
   collections   CollectionVideo[]
   watchProgress WatchProgress[]
+}
+
+model Topic {
+  id      String @id @default(cuid())
+  videoId String
+  name    String
+
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
 }
 
 model Bookmark {

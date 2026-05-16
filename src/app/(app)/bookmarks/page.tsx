@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server"
-import { prisma } from "@/lib/prisma"
+import { getPrisma } from "@/lib/prisma"
 import { getVideoDetails } from "@/services/youtube"
 import { VideoMasonry } from "@/components/video-masonry"
 import { redirect } from "next/navigation"
@@ -12,6 +12,7 @@ export default async function BookmarksPage() {
     redirect("/sign-in")
   }
 
+  const prisma = await getPrisma()
   const user = await prisma.user.findUnique({
     where: { clerkId: userId },
     include: {
