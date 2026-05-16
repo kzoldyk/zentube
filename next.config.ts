@@ -2,9 +2,7 @@ import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 // Initialize for local development
-if (process.env.NODE_ENV === "development") {
-  initOpenNextCloudflareForDev();
-}
+initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
   images: {

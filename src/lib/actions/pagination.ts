@@ -25,12 +25,12 @@ export async function loadMoreSearch(query: string, pageToken: string): Promise<
       }
     })
     if (user) {
-      bookmarkedYoutubeIds = new Set(user.bookmarks.map((b: any) => b.video.youtubeId))
+      bookmarkedYoutubeIds = new Set(user.bookmarks.map(b => b.video.youtubeId))
     }
   }
 
   return {
-    videos: result.videos.map((v: ZentubeVideo) => ({
+    videos: result.videos.map(v => ({
       ...v,
       isBookmarked: bookmarkedYoutubeIds.has(v.id)
     })),
