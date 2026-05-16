@@ -48,7 +48,7 @@ export async function getUserFeed(userId: string): Promise<{ videos: (ZentubeVid
   ])
   
   // Combine interest results with base weights
-  const weightedVideos = interestResults.flatMap((result: PromiseSettledResult<ZentubeVideo[]>, index) => {
+  const weightedVideos = interestResults.flatMap((result: PromiseSettledResult<{ videos: ZentubeVideo[]; nextPageToken?: string }>, index: number) => {
     if (result.status === 'fulfilled') {
       const weight = 1 / (index + 1)
       return result.value.videos.map((video: ZentubeVideo) => ({
