@@ -31,13 +31,13 @@ export default async function BookmarksPage() {
     return null
   }
 
-  const bookmarkedVideoIds = user.bookmarks.map(b => b.video.youtubeId)
+  const bookmarkedVideoIds = user.bookmarks.map((b: any) => b.video.youtubeId)
   
   let videos: (ZentubeVideo & { isBookmarked: boolean })[] = []
   if (bookmarkedVideoIds.length > 0) {
     // Fetch fresh metadata from YouTube as requested
     const details = await getVideoDetails(bookmarkedVideoIds)
-    videos = details.map(v => ({
+    videos = details.map((v: ZentubeVideo) => ({
       ...v,
       isBookmarked: true
     }))

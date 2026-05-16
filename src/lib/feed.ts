@@ -18,10 +18,10 @@ export async function getUserFeed(userId: string): Promise<{ videos: (ZentubeVid
 
   if (!user || user.interests.length === 0) return { videos: [], hasMore: false }
 
-  const bookmarkedYoutubeIds = new Set(user.bookmarks.map(b => b.video.youtubeId))
+  const bookmarkedYoutubeIds = new Set(user.bookmarks.map((b: any) => b.video.youtubeId))
 
   // 1. Fetch videos based on static interests
-  const interestPromises = user.interests.map(interest => 
+  const interestPromises = user.interests.map((interest: any) => 
     searchVideos(interest.topic, 12) 
   )
 
