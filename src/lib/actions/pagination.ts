@@ -3,7 +3,7 @@
 import { searchVideos } from "@/services/youtube"
 import { ZentubeVideo } from "@/types/youtube"
 import { auth } from "@clerk/nextjs/server"
-import { getPrisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { getUserFeed } from "@/lib/feed"
 
 export async function loadMoreSearch(query: string, pageToken: string): Promise<{ 
@@ -15,7 +15,6 @@ export async function loadMoreSearch(query: string, pageToken: string): Promise<
   
   let bookmarkedYoutubeIds = new Set<string>()
   if (userId) {
-    const prisma = await getPrisma()
     const user = await prisma.user.findUnique({
       where: { clerkId: userId },
       include: { 

@@ -1,7 +1,7 @@
 "use server"
 
 import { auth } from "@clerk/nextjs/server"
-import { getPrisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { getVideoDetails } from "@/services/youtube"
 
@@ -9,7 +9,6 @@ import { getVideoDetails } from "@/services/youtube"
  * Ensures a video exists in our database, fetching from YouTube if necessary.
  */
 async function ensureVideo(youtubeId: string) {
-  const prisma = await getPrisma()
   let video = await prisma.video.findUnique({
     where: { youtubeId }
   })
@@ -38,7 +37,6 @@ export async function toggleBookmark(youtubeId: string) {
   const { userId } = await auth()
   if (!userId) throw new Error("Unauthorized")
 
-  const prisma = await getPrisma()
   const user = await prisma.user.findUnique({
     where: { clerkId: userId },
     select: { id: true }
@@ -71,7 +69,6 @@ export async function updateProgress(youtubeId: string, progress: number) {
     const { userId } = await auth()
     if (!userId) return
 
-    const prisma = await getPrisma()
     const user = await prisma.user.findUnique({
       where: { clerkId: userId },
       select: { id: true }
@@ -95,7 +92,6 @@ export async function getWatchState(youtubeId: string) {
     const { userId } = await auth()
     if (!userId) return { isBookmarked: false, progress: 0 }
 
-    const prisma = await getPrisma()
     const user = await prisma.user.findUnique({
       where: { clerkId: userId },
       select: { id: true }

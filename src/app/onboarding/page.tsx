@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { OnboardingClient } from "./onboarding-client";
 
 export default async function OnboardingPage() {
@@ -11,7 +11,6 @@ export default async function OnboardingPage() {
   }
 
   // Check if user already has 3+ interests
-  const prisma = await getPrisma();
   const user = await prisma.user.findUnique({
     where: { clerkId: userId },
     include: {

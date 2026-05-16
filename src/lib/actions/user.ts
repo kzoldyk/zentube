@@ -1,14 +1,13 @@
 "use server"
 
 import { auth } from "@clerk/nextjs/server"
-import { getPrisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
 export async function saveUserInterests(topics: string[]) {
   const { userId } = await auth()
   if (!userId) throw new Error("Unauthorized")
 
-  const prisma = await getPrisma()
   const uniqueTopics = Array.from(new Set(topics))
 
   // Create or update user and their interests

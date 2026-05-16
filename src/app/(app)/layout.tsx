@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { MainHeader } from "@/components/main-header";
-import { getPrisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export default async function AppLayout({
   children,
@@ -13,7 +13,6 @@ export default async function AppLayout({
   if (!userId) redirect("/sign-in");
 
   // Check if user has completed onboarding (has at least 3 interests)
-  const prisma = await getPrisma();
   const user = await prisma.user.findUnique({
     where: { clerkId: userId },
     select: {
