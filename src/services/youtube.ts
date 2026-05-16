@@ -40,21 +40,28 @@ async function youtubeFetch<T>(
 }
 
 /**
- * Search for videos based on a query
+ * Search for videos based on a query with pagination support
  */
 export async function searchVideos(
   query: string,
-  maxResults = 12
-): Promise<ZentubeVideo[]> {
-  const data = await youtubeFetch<YouTubeSearchResponse>("/search", {
+  maxResults = 12,
+  pageToken?: string
+): Promise<{ videos: ZentubeVideo[]; nextPageToken?: string }> {
+  const params: Record<string, string> = {
     part: "snippet",
     q: query,
     type: "video",
     maxResults: maxResults.toString(),
     safeSearch: "moderate",
-  });
+  }
 
-  return data.items
+  if (pageToken) {
+    params.pageToken = pageToken
+  }
+
+  const data = await youtubeFetch<YouTubeSearchResponse>("/search", params)
+
+  const videos = data.items
     .filter((item) => item.id.videoId) // Ensure it's a video
     .map((item) => ({
       id: item.id.videoId!,
@@ -64,7 +71,12 @@ export async function searchVideos(
       channelId: item.snippet.channelId,
       channelTitle: item.snippet.channelTitle,
       publishedAt: item.snippet.publishedAt,
-    }));
+    }))
+
+  return {
+    videos,
+    nextPageToken: data.nextPageToken,
+  }
 }
 
 /**
@@ -91,4 +103,18 @@ export async function getVideoDetails(
     duration: item.contentDetails.duration,
     viewCount: item.statistics.viewCount,
   }));
+}
+
+/**
+ * Get related videos based on title and channel (Fallback for deprecated relatedToVideoId)
+ */
+export async function getRelatedVideos(
+  video: ZentubeVideo,
+  maxResults = 12
+): Promise<{ videos: ZentubeVideo[]; nextPageToken?: string }> {
+  // Use first 5 words of title + channel title for a relevant search
+  const keywords = video.title.split(" ").slice(0, 5).join(" ")
+  const query = `${keywords} ${video.channelTitle}`
+  
+  return searchVideos(query, maxResults)
 }
