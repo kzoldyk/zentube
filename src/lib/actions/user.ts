@@ -1,31 +1,30 @@
 "use server"
 
-import { auth } from "@clerk/nextjs/server"
-import { prisma } from "@/lib/prisma"
+import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { getDb } from "@/db"
+import { userInterests } from "@/db/schema"
+import { createId, requireUser } from "@/lib/auth"
 
 export async function saveUserInterests(topics: string[]) {
-  const { userId } = await auth()
-  if (!userId) throw new Error("Unauthorized")
-
+  const user = await requireUser()
+  const db = await getDb()
   const uniqueTopics = Array.from(new Set(topics))
 
-  // Create or update user and their interests
-  await prisma.user.upsert({
-    where: { clerkId: userId },
-    update: {
-      interests: {
-        deleteMany: {},
-        create: uniqueTopics.map(topic => ({ topic }))
-      }
-    },
-    create: {
-      clerkId: userId,
-      interests: {
-        create: uniqueTopics.map(topic => ({ topic }))
-      }
-    }
-  })
+  await db.delete(userInterests).where(eq(userInterests.userId, user.id))
+
+  if (uniqueTopics.length > 0) {
+    await db.insert(userInterests).values(
+      uniqueTopics.map((topic) => ({
+        id: createId(),
+        userId: user.id,
+        topic,
+        createdAt: new Date(),
+      }))
+    )
+  }
 
   revalidatePath("/", "layout")
+  revalidatePath("/feed")
+  revalidatePath("/settings")
 }

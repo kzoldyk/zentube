@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import { AppShellProvider } from "@/components/app-shell-provider";
 import "./globals.css";
 
@@ -46,9 +45,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col antialiased tracking-tight">
-        <ClerkProvider>
-          <AppShellProvider>{children}</AppShellProvider>
-        </ClerkProvider>
+        <AppShellProvider>{children}</AppShellProvider>
       </body>
     </html>
   );

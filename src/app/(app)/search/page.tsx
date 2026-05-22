@@ -1,36 +1,31 @@
-import { auth } from "@clerk/nextjs/server"
+import { eq } from "drizzle-orm"
 import Link from "next/link"
 import { searchVideos } from "@/services/youtube"
-import { prisma } from "@/lib/prisma"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search } from "lucide-react"
 import { VideoMasonry } from "@/components/video-masonry"
+import { requireUser } from "@/lib/auth"
+import { getDb } from "@/db"
+import { bookmarks, userInterests } from "@/db/schema"
 
 export default async function SearchPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>
 }) {
-  const { userId } = await auth()
-  if (!userId) return null
+  const user = await requireUser()
 
   const { q } = await searchParams
   const query = q?.trim() ?? ""
 
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    include: {
-      interests: true,
-      bookmarks: {
-        include: {
-          video: true,
-        },
-      },
-    },
-  })
+  const db = await getDb()
+  const [interestRows, bookmarkRows] = await Promise.all([
+    db.select().from(userInterests).where(eq(userInterests.userId, user.id)),
+    db.select().from(bookmarks).where(eq(bookmarks.userId, user.id)),
+  ])
 
-  const bookmarkedYoutubeIds = new Set(user?.bookmarks.map((bookmark) => bookmark.video.youtubeId) ?? [])
+  const bookmarkedYoutubeIds = new Set(bookmarkRows.map((bookmark) => bookmark.youtubeId))
   const results = query ? await searchVideos(query, 24) : []
   const videos = results.map((video) => ({
     ...video,
@@ -55,9 +50,9 @@ export default async function SearchPage({
               </CardDescription>
             </div>
           </CardHeader>
-          {!query && user?.interests.length ? (
+          {!query && interestRows.length ? (
             <CardContent className="flex flex-wrap gap-2 pt-0">
-              {user.interests.map((interest) => (
+              {interestRows.map((interest) => (
                 <Badge key={interest.id} variant="secondary" className="rounded-full px-3 py-1.5">
                   <Link href={`/search?q=${encodeURIComponent(interest.topic)}`}>{interest.topic}</Link>
                 </Badge>

@@ -1,24 +1,19 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { count, eq } from "drizzle-orm";
+import { getDb } from "@/db";
+import { userInterests } from "@/db/schema";
+import { requireUser } from "@/lib/auth";
 import { OnboardingClient } from "./onboarding-client";
 
 export default async function OnboardingPage() {
-  const { userId } = await auth();
+  const user = await requireUser();
+  const db = await getDb()
+  const interests = await db
+    .select({ value: count() })
+    .from(userInterests)
+    .where(eq(userInterests.userId, user.id))
 
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  // Check if user already has 3+ interests
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    include: {
-      interests: true,
-    },
-  });
-
-  if (user && user.interests.length >= 3) {
+  if ((interests[0]?.value ?? 0) >= 3) {
     redirect("/feed");
   }
 
