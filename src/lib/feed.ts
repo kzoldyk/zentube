@@ -1,59 +1,48 @@
-import { prisma } from "@/lib/prisma"
+import { eq } from "drizzle-orm"
+import { getDb } from "@/db"
+import { bookmarks, userInterests } from "@/db/schema"
 import { searchVideos } from "@/services/youtube"
 import { ZentubeVideo } from "@/types/youtube"
 
-export async function getUserFeed(userId: string): Promise<(ZentubeVideo & { isBookmarked?: boolean })[]> {
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    include: { 
-      interests: true,
-      bookmarks: {
-        include: {
-          video: true
-        }
-      }
-    }
-  })
+export async function getUserFeed(
+  userId: string
+): Promise<(ZentubeVideo & { isBookmarked?: boolean })[]> {
+  const db = await getDb()
+  const [interests, userBookmarks] = await Promise.all([
+    db.select().from(userInterests).where(eq(userInterests.userId, userId)),
+    db.select().from(bookmarks).where(eq(bookmarks.userId, userId)),
+  ])
 
-  if (!user || user.interests.length === 0) return []
+  if (interests.length === 0) return []
 
-  const bookmarkedYoutubeIds = new Set(user.bookmarks.map(b => b.video.youtubeId))
+  const bookmarkedYoutubeIds = new Set(userBookmarks.map((bookmark) => bookmark.youtubeId))
 
-  // Fetch videos for all topics in parallel
-  const videoPromises = user.interests.map(interest => 
-    searchVideos(interest.topic, 12) // Slightly more per topic to ensure we hit 48
-  )
-  
+  const videoPromises = interests.map((interest) => searchVideos(interest.topic, 12))
   const results = await Promise.allSettled(videoPromises)
-  
-  // Combine successful results and apply weights based on topic order
+
   const weightedVideos = results.flatMap((result, index) => {
-    if (result.status === 'fulfilled') {
-      // Weight decreases as index increases (1, 0.5, 0.33...)
+    if (result.status === "fulfilled") {
       const weight = 1 / (index + 1)
-      return result.value.map(video => ({
+      return result.value.map((video) => ({
         video,
-        // Calculate a random score skewed by the topic's weight
-        score: Math.random() * weight
+        score: Math.random() * weight,
       }))
     }
+
     return []
   })
 
-  // De-duplicate by video ID and sort by score
   const seen = new Set<string>()
-  const feed = weightedVideos
-    .filter(item => {
+  return weightedVideos
+    .filter((item) => {
       if (seen.has(item.video.id)) return false
       seen.add(item.video.id)
       return true
     })
-    .sort((a, b) => b.score - a.score) // Sort by descending score
-    .map(item => ({
+    .sort((a, b) => b.score - a.score)
+    .map((item) => ({
       ...item.video,
-      isBookmarked: bookmarkedYoutubeIds.has(item.video.id)
+      isBookmarked: bookmarkedYoutubeIds.has(item.video.id),
     }))
-    .slice(0, 48) // Apply global limit
-
-  return feed
+    .slice(0, 48)
 }

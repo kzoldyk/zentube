@@ -1,27 +1,21 @@
-import { auth } from "@clerk/nextjs/server"
-import { prisma } from "@/lib/prisma"
+import { count, eq } from "drizzle-orm"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Layers3, Sparkles, SlidersHorizontal } from "lucide-react"
+import { requireUser } from "@/lib/auth"
+import { getDb } from "@/db"
+import { bookmarks, userInterests, watchProgress } from "@/db/schema"
 
 export default async function SettingsPage() {
-  const { userId } = await auth()
-  if (!userId) return null
+  const user = await requireUser()
+  const db = await getDb()
+  const [interestRows, bookmarkCount, progressCount] = await Promise.all([
+    db.select().from(userInterests).where(eq(userInterests.userId, user.id)),
+    db.select({ value: count() }).from(bookmarks).where(eq(bookmarks.userId, user.id)),
+    db.select({ value: count() }).from(watchProgress).where(eq(watchProgress.userId, user.id)),
+  ])
 
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    include: {
-      interests: true,
-      _count: {
-        select: {
-          bookmarks: true,
-          watchProgresses: true,
-        },
-      },
-    },
-  })
-
-  const interests = user?.interests.map((interest) => interest.topic) ?? []
+  const interests = interestRows.map((interest) => interest.topic)
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">
@@ -82,12 +76,12 @@ export default async function SettingsPage() {
               </div>
               <div className="rounded-2xl border bg-background px-4 py-3">
                 <p className="text-sm font-medium">Bookmarks</p>
-                <p className="text-sm text-muted-foreground">{user?._count.bookmarks ?? 0} saved videos</p>
+                <p className="text-sm text-muted-foreground">{bookmarkCount[0]?.value ?? 0} saved videos</p>
               </div>
               <div className="rounded-2xl border bg-background px-4 py-3">
                 <p className="text-sm font-medium">Watch history signals</p>
                 <p className="text-sm text-muted-foreground">
-                  {user?._count.watchProgresses ?? 0} videos with saved progress
+                  {progressCount[0]?.value ?? 0} videos with saved progress
                 </p>
               </div>
             </CardContent>

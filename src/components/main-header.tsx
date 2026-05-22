@@ -1,9 +1,10 @@
 "use client"
 
+import { Suspense } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs"
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { Menu, PanelLeftClose, PanelLeftOpen, LogOut } from "lucide-react"
+import { signOut } from "@/lib/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -28,7 +29,11 @@ const routeMeta: Record<string, { label: string; description: string }> = {
   "/settings": { label: "Settings", description: "Your feed inputs and preferences." },
 }
 
-export function MainHeader() {
+interface MainHeaderProps {
+  viewerEmail?: string | null
+}
+
+export function MainHeader({ viewerEmail = null }: MainHeaderProps) {
   const pathname = usePathname()
   const currentRoute = routeMeta[pathname] ?? {
     label: "Zentube",
@@ -92,7 +97,9 @@ export function MainHeader() {
         </div>
 
         <div className="min-w-0 flex-1">
-          <GlobalSearch />
+          <Suspense fallback={<div className="h-10" />}>
+            <GlobalSearch />
+          </Suspense>
         </div>
 
         <div className="hidden items-center gap-2 xl:flex">
@@ -103,21 +110,32 @@ export function MainHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <Button variant="ghost" size="sm" className="rounded-full">
-                Sign in
-              </Button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <Button size="sm" className="rounded-full">
-                Sign up
-              </Button>
-            </SignUpButton>
-          </Show>
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
+          {viewerEmail ? (
+            <>
+              <Badge variant="outline" className="hidden rounded-full px-3 py-1.5 md:inline-flex">
+                {viewerEmail}
+              </Badge>
+              <form action={signOut}>
+                <Button type="submit" variant="outline" size="sm" className="rounded-full px-3">
+                  <LogOut className="size-4" />
+                  Sign out
+                </Button>
+              </form>
+            </>
+          ) : (
+            <>
+              <Link href="/sign-in">
+                <Button variant="ghost" size="sm" className="rounded-full">
+                  Sign in
+                </Button>
+              </Link>
+              <Link href="/sign-up">
+                <Button size="sm" className="rounded-full">
+                  Sign up
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>

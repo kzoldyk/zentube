@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import { getUserFeed } from "@/lib/feed";
 import { VideoMasonry } from "@/components/video-masonry";
 import { Badge } from "@/components/ui/badge";
@@ -6,15 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { requireUser } from "@/lib/auth";
 
 export default async function FeedPage() {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    return null;
-  }
-
-  const videos = await getUserFeed(userId)
+  const user = await requireUser()
+  const videos = await getUserFeed(user.id)
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">

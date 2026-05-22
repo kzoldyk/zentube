@@ -1,0 +1,11 @@
+import type { drizzle } from "drizzle-orm/d1"
+
+type D1Binding = Parameters<typeof drizzle>[0]
+
+declare global {
+  interface CloudflareEnv {
+    DB: D1Binding
+  }
+}
+
+export {}

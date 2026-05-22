@@ -1,39 +1,19 @@
-import { auth } from "@clerk/nextjs/server"
-import { prisma } from "@/lib/prisma"
+import { eq } from "drizzle-orm"
 import { getVideoDetails } from "@/services/youtube"
 import { VideoMasonry } from "@/components/video-masonry"
-import { redirect } from "next/navigation"
 import { ZentubeVideo } from "@/types/youtube"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bookmark, Clock3 } from "lucide-react"
+import { requireUser } from "@/lib/auth"
+import { getDb } from "@/db"
+import { bookmarks } from "@/db/schema"
 
 export default async function BookmarksPage() {
-  const { userId } = await auth()
-  
-  if (!userId) {
-    redirect("/sign-in")
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    include: {
-      bookmarks: {
-        include: {
-          video: true
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      }
-    }
-  })
-
-  if (!user) {
-    return null
-  }
-
-  const bookmarkedVideoIds = user.bookmarks.map(b => b.video.youtubeId)
+  const user = await requireUser()
+  const db = await getDb()
+  const bookmarkRows = await db.select().from(bookmarks).where(eq(bookmarks.userId, user.id))
+  const bookmarkedVideoIds = bookmarkRows.map((bookmark) => bookmark.youtubeId)
   
   let videos: (ZentubeVideo & { isBookmarked: boolean })[] = []
   if (bookmarkedVideoIds.length > 0) {

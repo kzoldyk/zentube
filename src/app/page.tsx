@@ -26,7 +26,7 @@ export default function LandingPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/feed"
+              href="/sign-up"
               className={buttonVariants({
                 size: "lg",
                 className: "rounded-full px-5",
@@ -36,14 +36,14 @@ export default function LandingPage() {
               <ArrowRight className="size-4" />
             </Link>
             <Link
-              href="/about"
+              href="/sign-in"
               className={buttonVariants({
                 variant: "outline",
                 size: "lg",
                 className: "rounded-full px-5",
               })}
             >
-              Learn more
+              Sign in
             </Link>
           </div>
         </div>

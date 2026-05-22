@@ -1,61 +1,63 @@
 "use server"
 
-import { auth } from "@clerk/nextjs/server"
-import { prisma } from "@/lib/prisma"
+import { and, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { getDb } from "@/db"
+import { bookmarks, videos, watchProgress } from "@/db/schema"
+import { createId, getCurrentUser, requireUser } from "@/lib/auth"
 import { getVideoDetails } from "@/services/youtube"
 
-/**
- * Ensures a video exists in our database, fetching from YouTube if necessary.
- */
 async function ensureVideo(youtubeId: string) {
-  let video = await prisma.video.findUnique({
-    where: { youtubeId }
-  })
+  const db = await getDb()
+  const existing = await db.select().from(videos).where(eq(videos.youtubeId, youtubeId)).limit(1)
 
-  if (!video) {
-    const [details] = await getVideoDetails(youtubeId)
-    if (!details) throw new Error("Video not found on YouTube")
-
-    video = await prisma.video.create({
-      data: {
-        youtubeId: details.id,
-        title: details.title,
-        description: details.description,
-        thumbnailUrl: details.thumbnailUrl,
-        channelId: details.channelId,
-        channelTitle: details.channelTitle,
-        publishedAt: details.publishedAt ? new Date(details.publishedAt) : null,
-      }
-    })
+  if (existing[0]) {
+    return existing[0]
   }
 
-  return video
+  const [details] = await getVideoDetails(youtubeId)
+  if (!details) {
+    throw new Error("Video not found on YouTube")
+  }
+
+  await db.insert(videos).values({
+    youtubeId: details.id,
+    title: details.title,
+    description: details.description,
+    thumbnailUrl: details.thumbnailUrl,
+    channelId: details.channelId,
+    channelTitle: details.channelTitle,
+    duration: details.duration,
+    viewCount: details.viewCount,
+    publishedAt: details.publishedAt ? new Date(details.publishedAt) : null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+
+  const inserted = await db.select().from(videos).where(eq(videos.youtubeId, youtubeId)).limit(1)
+  return inserted[0]
 }
 
 export async function toggleBookmark(youtubeId: string) {
-  const { userId } = await auth()
-  if (!userId) throw new Error("Unauthorized")
+  const user = await requireUser()
+  const db = await getDb()
 
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true }
-  })
-  if (!user) throw new Error("User not found")
+  await ensureVideo(youtubeId)
 
-  const video = await ensureVideo(youtubeId)
+  const existing = await db
+    .select()
+    .from(bookmarks)
+    .where(and(eq(bookmarks.userId, user.id), eq(bookmarks.youtubeId, youtubeId)))
+    .limit(1)
 
-  const existing = await prisma.bookmark.findUnique({
-    where: { userId_videoId: { userId: user.id, videoId: video.id } }
-  })
-
-  if (existing) {
-    await prisma.bookmark.delete({
-      where: { id: existing.id }
-    })
+  if (existing[0]) {
+    await db.delete(bookmarks).where(eq(bookmarks.id, existing[0].id))
   } else {
-    await prisma.bookmark.create({
-      data: { userId: user.id, videoId: video.id }
+    await db.insert(bookmarks).values({
+      id: createId(),
+      userId: user.id,
+      youtubeId,
+      createdAt: new Date(),
     })
   }
 
@@ -66,22 +68,32 @@ export async function toggleBookmark(youtubeId: string) {
 
 export async function updateProgress(youtubeId: string, progress: number) {
   try {
-    const { userId } = await auth()
-    if (!userId) return
-
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true }
-    })
+    const user = await getCurrentUser()
     if (!user) return
 
-    const video = await ensureVideo(youtubeId)
+    const db = await getDb()
+    await ensureVideo(youtubeId)
 
-    await prisma.watchProgress.upsert({
-      where: { userId_videoId: { userId: user.id, videoId: video.id } },
-      update: { progress },
-      create: { userId: user.id, videoId: video.id, progress }
-    })
+    const existing = await db
+      .select()
+      .from(watchProgress)
+      .where(and(eq(watchProgress.userId, user.id), eq(watchProgress.youtubeId, youtubeId)))
+      .limit(1)
+
+    if (existing[0]) {
+      await db
+        .update(watchProgress)
+        .set({ progress, updatedAt: new Date() })
+        .where(eq(watchProgress.id, existing[0].id))
+    } else {
+      await db.insert(watchProgress).values({
+        id: createId(),
+        userId: user.id,
+        youtubeId,
+        progress,
+        updatedAt: new Date(),
+      })
+    }
   } catch (error) {
     console.error(`Failed to update watch progress for ${youtubeId}:`, error)
   }
@@ -89,33 +101,28 @@ export async function updateProgress(youtubeId: string, progress: number) {
 
 export async function getWatchState(youtubeId: string) {
   try {
-    const { userId } = await auth()
-    if (!userId) return { isBookmarked: false, progress: 0 }
+    const user = await getCurrentUser()
+    if (!user) {
+      return { isBookmarked: false, progress: 0 }
+    }
 
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true }
-    })
-    if (!user) return { isBookmarked: false, progress: 0 }
-
-    const video = await prisma.video.findUnique({
-      where: { youtubeId }
-    })
-
-    if (!video) return { isBookmarked: false, progress: 0 }
-
+    const db = await getDb()
     const [bookmark, progress] = await Promise.all([
-      prisma.bookmark.findUnique({
-        where: { userId_videoId: { userId: user.id, videoId: video.id } }
-      }),
-      prisma.watchProgress.findUnique({
-        where: { userId_videoId: { userId: user.id, videoId: video.id } }
-      })
+      db
+        .select()
+        .from(bookmarks)
+        .where(and(eq(bookmarks.userId, user.id), eq(bookmarks.youtubeId, youtubeId)))
+        .limit(1),
+      db
+        .select()
+        .from(watchProgress)
+        .where(and(eq(watchProgress.userId, user.id), eq(watchProgress.youtubeId, youtubeId)))
+        .limit(1),
     ])
 
     return {
-      isBookmarked: !!bookmark,
-      progress: progress?.progress || 0
+      isBookmarked: Boolean(bookmark[0]),
+      progress: progress[0]?.progress ?? 0,
     }
   } catch (error) {
     console.error(`Failed to get watch state for ${youtubeId}:`, error)
