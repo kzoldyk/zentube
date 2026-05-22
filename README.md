@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+Test commit for Cloudflare deployment validation.
+
 ## Getting Started
 
 First, run the development server:
