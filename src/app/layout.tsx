@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { AppShellProvider } from "@/components/app-shell-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,9 +29,26 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
+      suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (() => {
+                const savedTheme = localStorage.getItem("zentube-theme");
+                const theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "dark";
+                document.documentElement.classList.toggle("dark", theme === "dark");
+                document.documentElement.style.colorScheme = theme;
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col antialiased tracking-tight">
-        <ClerkProvider>{children}</ClerkProvider>
+        <ClerkProvider>
+          <AppShellProvider>{children}</AppShellProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

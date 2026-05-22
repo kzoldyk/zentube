@@ -2,22 +2,35 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Bookmark } from "lucide-react"
+import { Bookmark, Play, Sparkles } from "lucide-react"
 import { ZentubeVideo } from "@/types/youtube"
-import { cn } from "@/lib/utils"
+import { cn, formatDate } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { toggleBookmark } from "@/lib/actions/interactions"
 import { useOptimistic, useTransition } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { buttonVariants } from "@/components/ui/button"
 
 interface VideoCardProps {
   video: ZentubeVideo
   className?: string
   priority?: boolean
   isBookmarked?: boolean
+  featured?: boolean
 }
 
-export function VideoCard({ video, className, priority, isBookmarked = false }: VideoCardProps) {
+export function VideoCard({
+  video,
+  className,
+  priority,
+  isBookmarked = false,
+  featured = false,
+}: VideoCardProps) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [optimisticBookmarked, setOptimisticBookmarked] = useOptimistic(
     isBookmarked,
@@ -39,61 +52,127 @@ export function VideoCard({ video, className, priority, isBookmarked = false }: 
     })
   }
 
+  const handleOpenVideo = () => {
+    router.push(`/watch/${video.id}`)
+  }
+
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      handleOpenVideo()
+    }
+  }
+
   return (
     <motion.article
-      whileHover={{ scale: 1.02 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className={cn("group flex flex-col gap-2", className)}
+      whileHover={{ y: -4 }}
+      transition={{ type: "spring", stiffness: 280, damping: 24 }}
+      className={cn("group", className)}
     >
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
-        <Link 
-          href={`/watch/${video.id}`} 
-          className="block h-full w-full"
-          tabIndex={-1}
-          aria-hidden="true"
+      <Card
+        role="link"
+        tabIndex={0}
+        onClick={handleOpenVideo}
+        onKeyDown={handleCardKeyDown}
+        className="cursor-pointer overflow-hidden border border-border/80 bg-card/95 py-0 shadow-sm transition-shadow duration-200 group-hover:shadow-md"
+      >
+        <div
+          className={cn(
+            "relative overflow-hidden",
+            featured ? "aspect-[16/9] md:aspect-[21/9]" : "aspect-video"
+          )}
         >
-          <Image
-            src={video.thumbnailUrl}
-            alt={video.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            priority={priority}
-          />
-        </Link>
-        
-        <div className={cn(
-          "absolute top-2 right-2 z-10 transition-opacity duration-200",
-          optimisticBookmarked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-        )}>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={optimisticBookmarked ? "Remove from bookmarks" : "Save to bookmarks"}
-            className={cn(
-              "h-8 w-8 rounded-full backdrop-blur-sm transition-colors",
-              optimisticBookmarked 
-                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                : "bg-white/80 dark:bg-zinc-900/80 hover:bg-white dark:hover:bg-zinc-900"
-            )}
-            onClick={handleToggleBookmark}
-            disabled={isPending}
+          <Link
+            href={`/watch/${video.id}`}
+            className="relative block h-full w-full"
+            tabIndex={-1}
+            aria-hidden="true"
           >
-            <Bookmark className={cn("size-4", optimisticBookmarked && "fill-current")} />
-          </Button>
-        </div>
-      </div>
+            <Image
+              src={video.thumbnailUrl}
+              alt={video.title}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              sizes={
+                featured
+                  ? "(max-width: 768px) 100vw, (max-width: 1280px) 66vw, 50vw"
+                  : "(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+              }
+              priority={priority}
+            />
+          </Link>
 
-      <div className="flex flex-col gap-1 px-1">
-        <Link href={`/watch/${video.id}`}>
-          <h3 className="text-sm font-medium tracking-tight leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-            {video.title}
-          </h3>
-        </Link>
-        <p className="text-xs text-zinc-500 line-clamp-1">
-          {video.channelTitle}
-        </p>
-      </div>
+          <div className="absolute inset-0 bg-linear-to-t from-black/65 via-black/10 to-transparent" />
+
+          <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+            <Badge variant="secondary" className="rounded-full border border-white/15 bg-black/35 text-white backdrop-blur-md">
+              <Sparkles className="size-3" />
+              Curated
+            </Badge>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label={optimisticBookmarked ? "Remove from bookmarks" : "Save to bookmarks"}
+              className={cn(
+                "rounded-full border-white/15 bg-black/35 text-white backdrop-blur-md hover:bg-black/50 hover:text-white",
+                optimisticBookmarked && "bg-white text-foreground hover:bg-white/90 hover:text-foreground"
+              )}
+              onClick={handleToggleBookmark}
+              disabled={isPending}
+            >
+              <Bookmark className={cn("size-4", optimisticBookmarked && "fill-current")} />
+            </Button>
+          </div>
+
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 text-white">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.18em] text-white/70">
+                {video.channelTitle}
+              </p>
+              <h3
+                className={cn(
+                  "mt-1 line-clamp-2 font-medium tracking-tight",
+                  featured ? "text-2xl md:text-3xl" : "text-lg"
+                )}
+              >
+                {video.title}
+              </h3>
+            </div>
+            <div className="hidden rounded-full border border-white/15 bg-white/10 p-3 backdrop-blur-md sm:block">
+              <Play className="size-4 fill-current" />
+            </div>
+          </div>
+        </div>
+
+        <CardContent className="space-y-4 px-4 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <Avatar className="size-10 border bg-muted">
+                <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
+                  {video.channelTitle?.charAt(0) ?? "Y"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{video.channelTitle}</p>
+                <p className="truncate text-sm text-muted-foreground">
+                  {formatDate(video.publishedAt)}
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href={`/watch/${video.id}`}
+              className={buttonVariants({
+                variant: "ghost",
+                size: "sm",
+                className: "rounded-full px-3",
+              })}
+            >
+              Watch
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </motion.article>
   )
 }

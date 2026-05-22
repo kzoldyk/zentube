@@ -36,17 +36,19 @@ export function VideoMasonry({ videos }: VideoMasonryProps) {
       variants={container}
       initial="hidden"
       animate="show"
-      className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6"
+      className="grid grid-cols-1 gap-5 md:grid-cols-2 2xl:grid-cols-3"
     >
-      {videos.map((video) => (
+      {videos.map((video, index) => (
         <motion.div
           key={video.id}
           variants={item}
-          className="break-inside-avoid mb-6"
+          className={index === 0 ? "md:col-span-2 2xl:col-span-2" : undefined}
         >
           <VideoCard 
             video={video} 
             isBookmarked={video.isBookmarked}
+            priority={index < 4}
+            featured={index === 0}
           />
         </motion.div>
       ))}

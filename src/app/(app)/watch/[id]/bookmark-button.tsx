@@ -32,12 +32,9 @@ export function BookmarkButton({ videoId, initialIsBookmarked }: BookmarkButtonP
 
   return (
     <Button
-      variant={isBookmarked ? "default" : "outline"}
+      variant={isBookmarked ? "secondary" : "outline"}
       size="lg"
-      className={cn(
-        "gap-2 min-w-[140px] transition-all duration-300",
-        isBookmarked && "bg-blue-600 hover:bg-blue-700 border-blue-600"
-      )}
+      className={cn("min-w-[140px] gap-2 rounded-full px-4 transition-all duration-300")}
       onClick={handleToggle}
       disabled={isPending}
     >

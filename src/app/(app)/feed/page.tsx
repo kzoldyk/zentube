@@ -1,6 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { getUserFeed } from "@/lib/feed";
 import { VideoMasonry } from "@/components/video-masonry";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Sparkles } from "lucide-react";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function FeedPage() {
   const { userId } = await auth();
@@ -9,25 +14,55 @@ export default async function FeedPage() {
     return null;
   }
 
-  const videos = await getUserFeed(userId);
+  const videos = await getUserFeed(userId)
 
   return (
-    <div className="flex flex-1 flex-col p-6">
-      <div className="max-w-4xl mb-8">
-        <h2 className="text-2xl font-semibold tracking-tight">Your Feed</h2>
-        <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-          Showing curated videos for your interests.
-        </p>
-      </div>
+    <div className="flex flex-1 flex-col p-4 sm:p-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <Card className="border border-border/80 bg-card/95 shadow-sm">
+          <CardHeader className="gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-3">
+              <Badge variant="outline" className="rounded-full px-2.5 py-1">
+                <Sparkles className="size-3" />
+                Personalized feed
+              </Badge>
+              <div className="space-y-1.5">
+                <CardTitle className="text-2xl">Your feed</CardTitle>
+                <CardDescription className="max-w-2xl text-sm">
+                  Clean recommendations shaped by what you selected, without extra noise.
+                </CardDescription>
+              </div>
+            </div>
+            <Link
+              href="/settings"
+              className={buttonVariants({
+                variant: "outline",
+                className: "rounded-full px-4",
+              })}
+            >
+              Feed settings
+            </Link>
+          </CardHeader>
+        </Card>
 
-      <VideoMasonry videos={videos} />
-      
-      {videos.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-zinc-500">No videos found based on your interests.</p>
-          <p className="text-sm text-zinc-400 mt-1">Try updating your interests in settings.</p>
-        </div>
-      )}
+        {videos.length > 0 ? (
+          <VideoMasonry videos={videos} />
+        ) : (
+          <Card className="border-dashed py-0">
+            <CardContent className="flex min-h-72 flex-col items-center justify-center gap-3 p-8 text-center">
+              <div className="rounded-3xl border bg-muted p-4">
+                <Sparkles className="size-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg font-medium">No videos found yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Update your interests to refresh the feed with better matches.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

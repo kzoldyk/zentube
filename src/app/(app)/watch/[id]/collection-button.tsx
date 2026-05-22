@@ -8,7 +8,7 @@ export function CollectionButton() {
     <Button
       variant="outline"
       size="lg"
-      className="gap-2"
+      className="gap-2 rounded-full px-4"
       onClick={() => alert("Collections feature coming soon!")}
     >
       <Plus className="h-4 w-4" />

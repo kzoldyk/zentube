@@ -29,9 +29,9 @@ export default async function AppLayout({
   return (
     <div className="flex flex-col flex-1">
       <MainHeader />
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         <SidebarNav />
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main className="flex min-w-0 flex-1 flex-col">{children}</main>
       </div>
     </div>
   );
