@@ -8,7 +8,7 @@ import { sessions, users } from "@/db/schema"
 
 const SESSION_COOKIE_NAME = "zentube_session"
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30
-const PASSWORD_ITERATIONS = 120_000
+const PASSWORD_ITERATIONS = 100_000
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
@@ -28,7 +28,7 @@ function hexToBytes(hex: string) {
   return bytes
 }
 
-async function derivePasswordHash(password: string, saltHex: string) {
+async function derivePasswordHash(password: string, saltHex: string, iterations: number) {
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(password),
@@ -41,7 +41,7 @@ async function derivePasswordHash(password: string, saltHex: string) {
     {
       name: "PBKDF2",
       salt: hexToBytes(saltHex),
-      iterations: PASSWORD_ITERATIONS,
+      iterations,
       hash: "SHA-256",
     },
     keyMaterial,
@@ -62,16 +62,17 @@ export function createId() {
 
 export async function hashPassword(password: string) {
   const salt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)))
-  const hash = await derivePasswordHash(password, salt)
+  const hash = await derivePasswordHash(password, salt, PASSWORD_ITERATIONS)
   return `${PASSWORD_ITERATIONS}:${salt}:${hash}`
 }
 
 export async function verifyPassword(password: string, storedHash: string) {
   const [iterations, salt, hash] = storedHash.split(":")
   if (!iterations || !salt || !hash) return false
-  if (Number(iterations) !== PASSWORD_ITERATIONS) return false
+  const parsedIterations = Number(iterations)
+  if (!Number.isInteger(parsedIterations) || parsedIterations <= 0) return false
 
-  const candidateHash = await derivePasswordHash(password, salt)
+  const candidateHash = await derivePasswordHash(password, salt, parsedIterations)
   return candidateHash === hash
 }
 
